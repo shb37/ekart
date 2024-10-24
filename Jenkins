@@ -55,43 +55,41 @@ pipeline {
                }
             }
         }
-        stage('TRIVY FS SCAN') {
+        stage('Docker Build') {
             steps {
-                script {
-                    try {
-                        sh "trivy fs . > trivyfs.txt" 
-                    }catch(Exception e){
-                        input(message: "Are you sure to proceed?", ok: "Proceed")
+                script{
+                    withDockerRegistry(credentialsId: 'docker-cred', toolName: 'docker')  {
+                      sh 'docker build -t shb337/ekart:latest -f docker/Dockerfile . '
                     }
                 }
+               
             }
         }
-        stage("Docker Build Image"){
-            steps{
-                sh "docker build --build-arg API_KEY=2af0904de8242d48e8527eeedc3e19d9 -t netflix ."
+        stage('Trivy image scan') {
+            steps {
+                sh 'trivy image shb337/ekart:latest > trivyreport.txt'
             }
         }
-        stage("TRIVY"){
-            steps{
-                sh "trivy image netflix > trivyimage.txt"
-            }
-        }
-        stage("Docker Push"){
-            steps{
-                script {
-                    withDockerRegistry(credentialsId: 'docker-cred', toolName: 'docker'){   
-                    sh "docker tag netflix shb337/ekart:latest"
-                    sh "docker push shb337/ekart:latest"
-                        
+        stage('Docker Push') {
+            steps {
+                script{
+                    withDockerRegistry(credentialsId: 'docker-cred', toolName: 'docker')  {
+                      sh 'docker push shb337/ekart:latest '
                     }
                 }
+               
             }
         }
         stage("Proceed to Deploy"){
             steps{
                  script{
-                    input(message: "Are you sure to proceed to Deploy?", ok: "Proceed")
+                    input(message: "Ready to Deploy!! Are you sure to proceed?", ok: "Proceed")
                 }
+            }
+        }
+        stage("Deploy the app"){
+            steps{
+                 sh 'docker run -d -p 8082:8082 shb337/ekart:latest'
             }
         }
     }
