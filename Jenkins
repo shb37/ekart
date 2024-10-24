@@ -39,7 +39,20 @@ pipeline {
         stage('OWASP FS SCAN') {
             steps {
                 dependencyCheck additionalArguments: '--scan ./ --disableYarnAudit --disableNodeAudit', odcInstallation: 'dpc'
-                dependencyCheckPublisher pattern: '**/dependency-check-report.xml'
+                dependencyCheckPublisher pattern: '**/dependency-check-report.xml' 
+            }
+        }
+        stage('Maven Build') {
+            steps {
+                sh 'mvn package -DskipTests=true'
+            }
+        }
+        stage('deploy to Nexus') {
+            steps {
+               withMaven(globalMavenSettingsConfig: 'global-maven', jdk: 'jdk17', maven: 'maven3', mavenSettingsConfig: '', traceability: true) {
+                 sh 'mvn deploy -DskipTests=true'
+                   
+               }
             }
         }
         stage('TRIVY FS SCAN') {
@@ -55,25 +68,29 @@ pipeline {
         }
         stage("Docker Build Image"){
             steps{
-                   
                 sh "docker build --build-arg API_KEY=2af0904de8242d48e8527eeedc3e19d9 -t netflix ."
             }
         }
         stage("TRIVY"){
             steps{
                 sh "trivy image netflix > trivyimage.txt"
-                script{
-                    input(message: "Are you sure to proceed?", ok: "Proceed")
-                }
             }
         }
         stage("Docker Push"){
             steps{
                 script {
                     withDockerRegistry(credentialsId: 'docker-cred', toolName: 'docker'){   
-                    sh "docker tag netflix gauris17/netflix:latest "
-                    sh "docker push gauris17/netflix:latest"
+                    sh "docker tag netflix shb337/ekart:latest"
+                    sh "docker push shb337/ekart:latest"
+                        
                     }
+                }
+            }
+        }
+        stage("Proceed to Deploy"){
+            steps{
+                 script{
+                    input(message: "Are you sure to proceed to Deploy?", ok: "Proceed")
                 }
             }
         }
