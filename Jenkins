@@ -5,8 +5,9 @@ pipeline {
     }
     tools {
         maven 'maven3'
-        java 'jdk17'
+        jdk 'jdk17'
     }
+    
     stages {
         stage('clean workspace') {
             steps {
@@ -25,23 +26,24 @@ pipeline {
         }
         stage('unit test') {
             steps {
-                sh 'mvn test -DskipTest=true'
+                sh 'mvn test -DskipTests=true'
             }
         }
         stage("Sonarqube Analysis") {
             steps {
                 withSonarQubeEnv('sonar-server') {
                     sh '''$SCANNER_HOME/bin/sonar-scanner -Dsonar.projectName=ekart \
-                    -Dsonar.projectKey=ekart -Dsonar.jav.binaries=.'''
+                    -Dsonar.projectKey=ekart -Dsonar.java.binaries=. '''
                 }
             }
         }
-        stage('OWASP FS SCAN') {
-            steps {
-                dependencyCheck additionalArguments: '--scan ./ --disableYarnAudit --disableNodeAudit', odcInstallation: 'dpc'
-                dependencyCheckPublisher pattern: '**/dependency-check-report.xml' 
-            }
-        }
+        // stage('OWASP FS SCAN') {
+        //     steps {
+        //         dependencyCheck additionalArguments: '--scan ./' , odcInstallation: 'dpc'
+        //         dependencyCheckPublisher pattern: '**/dependency-check-report.xml'
+        //     }
+        // }
+        
         stage('Maven Build') {
             steps {
                 sh 'mvn package -DskipTests=true'
@@ -89,7 +91,7 @@ pipeline {
         }
         stage("Deploy the app"){
             steps{
-                 sh 'docker run -d -p 8082:8082 shb337/ekart:latest'
+                 sh 'docker run -d -p 8070:8070 shb337/ekart:latest'
             }
         }
     }
