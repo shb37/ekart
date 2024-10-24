@@ -25,7 +25,7 @@ pipeline {
         }
         stage('unit test') {
             steps {
-                sh 'mvn test' -DskipTest=true'
+                sh 'mvn test -DskipTest=true'
             }
         }
         stage("Sonarqube Analysis") {
